@@ -1,0 +1,103 @@
+<?php
+
+function test_oauth_menu() {
+  $items['test_oauth/request'] = array(
+    'page callback' => 'test_oauth_request',
+    'access arguments' => array('access content'),
+  );
+  $items['test_oauth'] = array(
+    'page callback' => 'test_oauth_result',
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+function test_oauth_result() {
+  var_dump($_GET);
+
+  $consumer_key = 'www.inkit.net';
+  $consumer_secret = 'iD4fUfXNHG6jnzJxa7RldkSU';
+  $server = 'https://www.google.com/accounts';
+
+  $oauth_verifier = urldecode($_GET['oauth_verifier']);
+  $oauth_token = urldecode($_GET['oauth_token']);
+
+  $token = $_SESSION['gauth_request_token'];
+
+	$consumer = DrupalOAuthConsumer::load('www.inkit.net', FALSE);
+	$request_token = DrupalOAuthToken::loadByKey($oauth_token, $consumer, OAUTH_COMMON_TOKEN_TYPE_REQUEST);
+
+	$client = new DrupalOAuthClient($consumer, $request_token);
+
+	$access_token = $client->getAccessToken('https://www.google.com/accounts/OAuthGetAccessToken', array('verifier' => $oauth_verifier));
+	$request_token->delete();
+
+  //$request_token = new OAuthToken($token->key, $token->secret);
+  //$sig_method = DrupalOAuthClient::signatureMethod('SHA1');
+
+  //$params = array();
+  //$params['oauth_verifier'] = $oauth_verifier;
+  //$params['oauth_token'] = $oauth_token;
+  //var_dump($sig_method);
+  //$access = $client->getAccessToken('https://www.google.com/accounts/OAuthGetAccessToken', array('params' => $params, 'verifier' => $oauth_verifier));
+
+//  drupal_goto();
+
+  return;
+
+  print '<pre>';
+  var_dump($access_token);
+  print '</pre>'; die;
+
+  return "done!";
+}
+
+function test_oauth_request() {
+	$server = 'https://www.google.com/accounts';
+
+  $hd = 'inkit.net';
+  $scopes = 'http://docs.google.com/feeds/';
+
+  // Get the configured consumer key and secret.
+  $consumer_key = 'www.inkit.net';
+  $consumer_secret = 'iD4fUfXNHG6jnzJxa7RldkSU';
+  if (empty($consumer_key) || empty($consumer_secret)) {
+    watchdog('test_oauth', t('Missing Google Auth consumer key or secret.'));
+    return;
+  }
+
+	$consumer = new DrupalOAuthConsumer($consumer_key, $consumer_secret);
+	$sig_method = DrupalOAuthClient::signatureMethod('SHA1');
+  $client = new DrupalOAuthClient($consumer, NULL, $sig_method);
+	//var_dump($client);
+
+
+    // Get request token.
+	
+  $request_params = array();
+  $request_params['scope'] = $scopes;
+  $request_params['xoauth_displayname'] = variable_get('gauth_app_display_name', '');
+  //$request_token = $client->getRequestToken('/OAuthGetRequestToken', $request_params);
+
+	$request_token = $client->getRequestToken('https://www.google.com/accounts/OAuthGetRequestToken', array(
+    'callback' => 'http://localhost/drupalgapps-7/?q=test_oauth',
+		'params' => $request_params,
+  ));
+
+	$token = new stdClass;
+  $token->key = $request_token->key;
+  $token->secret = $request_token->secret;
+  $_SESSION['gauth_request_token'] = $token;
+
+  // Get request token authorized.
+  $auth_params = array();
+  $auth_params['hd'] = $hd;
+  $auth_url = $client->getAuthorizationUrl('https://www.google.com/accounts/OAuthAuthorizeToken', array(
+		'params' => $auth_params,
+	));
+
+	var_dump($auth_url);
+  //drupal_goto($auth_url);
+	
+  return "Request Token: " . $request_token->key . "<br>Auth URL: " . $auth_url;
+}
