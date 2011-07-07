@@ -6,14 +6,14 @@ function test_oauth_menu() {
     'access arguments' => array('access content'),
   );
   $items['test_oauth'] = array(
-    'page callback' => 'test_oauth_result',
+    'page callback' => 'test_oauth_access',
     'access arguments' => array('access content'),
   );
   return $items;
 }
 
-function test_oauth_result() {
-  var_dump($_GET);
+function test_oauth_access() {
+  //var_dump($_GET);
 	
   $consumer_key = 'www.inkit.net';
   $consumer_secret = 'iD4fUfXNHG6jnzJxa7RldkSU';
@@ -37,7 +37,17 @@ function test_oauth_result() {
   $params['oauth_token'] = $oauth_token;
   $access = $client->getAccessToken('https://www.google.com/accounts/OAuthGetAccessToken', array('params' => $params, 'verifier' => $oauth_verifier));
 	
-	print "<br><pre>"; var_dump($access); print "</pre>";
+	print "<br><spre>"; var_dump($access); print "</prse><br><br>";
+
+	$signature_method = DrupalOAuthClient::signatureMethod();
+	$auth = new HttpClientOAuth($consumer, $access, $signature_method, TRUE, TRUE);
+  //$formatter = new HttpClientBaseFormatter(HttpClientBaseFormatter::FORMAT_JSON);
+  $http_client = new HttpClient($auth);
+
+	$params = array(
+		'GData-Version' => '3.0',
+	);
+  $result = $http_client->get('https://docs.google.com/feeds/default/private/full');
 	
 	return "asda";
 }
